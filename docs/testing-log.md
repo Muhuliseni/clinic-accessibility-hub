@@ -10,6 +10,7 @@ Tester: _your name_ · Date: _date_ · Browser: Safari (VoiceOver), Chrome (Ligh
 | Lighthouse 13.4.1 | 100 / 100 / 100 / 100 | Directory view (Performance, Accessibility, Best Practices, SEO) |
 | Coverage (v8) | 100% lines, 92% branches | `src/` |
 | `npm audit --omit=dev` | 0 vulnerabilities | Production dependencies |
+| Lighthouse 13.4.1 (live site, mobile, slow 4G) | Performance 99, Accessibility 100, Best Practices 100, SEO 100 | https://jolly-profiterole-18779d.netlify.app/ |
 
 Screenshots: `../screenshots/lighthouse.png`, `../screenshots/coverage.png`
 
@@ -85,6 +86,7 @@ Testing covered VoiceOver with Safari only. Results in NVDA with Firefox or Orca
 ![Booking wireframe](../screenshots/wireframe-booking.png)
 ![Lighthouse](../screenshots/lighthouse.png)
 ![Coverage](../screenshots/coverage.png)
+![Lighthouse live](../screenshots/lighthouse-live.png)
 
 ## 5. Reflection
 The hardest part was making dynamic changes understandable without sight, because the same filter button can be correct visually and still say nothing useful to a screen reader. Tying `aria-expanded`, `aria-pressed`, `aria-busy` and the live regions directly to React state meant the announcements always matched what was on screen. Manual testing caught two bugs that the automated tests missed: the filter panel never hid, and a pressed filter did not darken, both caused by CSS overriding the `hidden` attribute and the pressed style. That showed me that axe-core and Lighthouse can report 100 while real usability problems remain, so they are a floor and not proof of accessibility. I would test with NVDA and a real screen reader user next, and add visible loading text for the availability refresh. The biggest thing I learned is to design for the keyboard and screen reader first and treat the visual layer as an addition to that foundation.
