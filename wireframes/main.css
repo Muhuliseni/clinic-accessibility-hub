@@ -1,0 +1,33 @@
+/* Contrast values computed with the WCAG 2.1 relative-luminance formula.
+   Ink   #1A2B2F on #FFFFFF  = 14.7:1 (AAA)   body text
+   Muted #4A5A5E on #FFFFFF  =  7.2:1 (AAA)   helper text
+   Green #0B6B4F on #FFFFFF  =  6.5:1 (AA)    links, headings
+   White #FFFFFF on #0B6B4F  =  6.5:1 (AA)    primary buttons
+   Ink   #1A2B2F on #E8F3EE  = 12.9:1 (AAA)   notice panels
+   Muted #4A5A5E on #E8F3EE  =  6.3:1 (AA)    helper text in side panels
+   Green #0B6B4F on #E8F3EE  =  5.7:1 (AA)    headings in side panels
+   Error #B3261E on #FFFFFF  =  6.5:1 (AA)    error text
+   Focus #2B6CB0 on #FFFFFF  =  5.4:1 (>=3:1 required for UI components); 4.8:1 on #E8F3EE
+   Large text (>=18pt / 14pt bold) uses ink or green, all well above 3:1 */
+:root{--ink:#1A2B2F;--muted:#4A5A5E;--green:#0B6B4F;--paper:#FFFFFF;--mint:#E8F3EE;--err:#B3261E;--focus:#2B6CB0;--line:#9FB3AA}
+*{box-sizing:border-box}
+body{margin:0;font:1.125rem/1.6 "Atkinson Hyperlegible",system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+h1,h2,h3{line-height:1.2;color:var(--green)}
+h1{font-size:2.25rem}
+a{color:var(--green);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.skip-link{position:absolute;left:-999px;top:0;background:var(--ink);color:#fff;padding:.75rem 1rem}
+.skip-link:focus{left:0;z-index:10}
+header,main,footer{max-width:70rem;margin:0 auto;padding:1rem 1.25rem}
+header{border-bottom:4px solid var(--green)}
+nav ul{display:flex;flex-wrap:wrap;gap:1.5rem;list-style:none;padding:0}
+main{display:grid;gap:2rem}
+@media(min-width:48rem){.with-aside{grid-template-columns:2fr 1fr}}
+section,article,aside{border:2px solid var(--line);padding:1rem 1.25rem;border-radius:4px}
+aside{background:var(--mint)}
+.btn{display:inline-block;background:var(--green);color:#fff;border:2px solid var(--green);padding:.7rem 1.2rem;font:inherit;font-weight:700;border-radius:4px;text-decoration:none;cursor:pointer;min-height:44px}
+label{display:block;font-weight:700;margin-top:1rem}
+input,select,textarea{font:inherit;width:100%;max-width:32rem;padding:.6rem;border:2px solid var(--ink);border-radius:4px;color:var(--ink);background:#fff}
+.hint{color:var(--muted);margin:.25rem 0 0;font-size:1rem}
+footer{border-top:2px solid var(--line);color:var(--muted)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
