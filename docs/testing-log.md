@@ -1,115 +1,42 @@
-# Testing log
+# Eastbrook Community Clinic: Accessible Booking Portal
+Ticket MD-2026-0143 · Candidate MD-48206 (even → Community Healthcare Clinic)
 
-Tester: Muhuliseni · Manual testing: 12 Oct 2026 · Automated re-run: 25 Nov 2026 · Browsers: Safari (VoiceOver), Chrome (keyboard, Lighthouse)
+**Live demo:** https://jolly-profiterole-18779d.netlify.app/
 
-## 1. Automated results
-| Tool | Result | Scope |
+```
+npm install && npm run dev      # develop
+npm test                        # component + axe tests
+npm run coverage                # coverage report
+npm run build                   # deploys via netlify.toml (publish: dist)
+```
+
+Part A lives in `/wireframes` (3 static pages, `main.css`, `persona.md`, `wcag-matrix.md`).
+
+**This is a demo.** Submitting the booking form shows a preview dialog only. No appointment is created and no email is sent, and the interface says so.
+
+### Wireframe to build
+| Wireframe | React build | Why it differs |
 |---|---|---|
-| Vitest + Testing Library (re-run 25 Nov 2026, after landing page and demo-wording changes) | 16 of 16 passing | Components, ARIA state, focus, landing page, confirmation wording |
-| axe-core | 0 violations | Landing page; directory; booking form in error state |
-| Lighthouse 13.4.1 (local build, 12 Oct 2026) | 100 / 100 / 100 / 100 | Directory view (Performance, Accessibility, Best Practices, SEO) |
-| Coverage (v8, 25 Nov 2026) | 100% lines, 94% branches | `src/` |
-| `npm audit --omit=dev` | 0 vulnerabilities | Production dependencies |
-| Lighthouse 13.5.0 (live site, mobile, 25 Nov 2026) | Performance 91, Accessibility 100, Best Practices 100, SEO 100 | https://jolly-profiterole-18779d.netlify.app/ (includes the new landing page) |
+| `index.html` landing page | `Home` view (default): Start here, Popular services, Access support | Matches |
+| `services.html` filter as checkboxes in a fieldset | Disclosure button with toggle buttons (`aria-expanded`, `aria-pressed`) | Deliberate: the panel can be collapsed on small screens; state is announced and shown with a tick, not colour alone |
+| `services.html` "Next available: Tuesday" | "N slots left today", refreshable | The refresh simulates live availability |
+| `book.html` without a service field | Adds a native `<select>` for service | A booking needs to know which service; preselected from the Book button |
+| `book.html` links between pages | Buttons that change view and move focus to the new `h1` | Single-page app: focus has to be managed because there is no page load |
+| `book.html` "Need help booking?" aside | Same aside | Matches |
 
-The 25 Nov live-site run is the current result. Performance fell from 99 (12 Oct) to 91, almost entirely from Speed Index (7.7 s; FCP and LCP 1.7 s, TBT 0 ms, CLS 0). Reducing Speed Index, for example by trimming font loading, is a next step. Screenshots: `../screenshots/lighthouse.png`, `../screenshots/coverage.png`, `../screenshots/lighthouse-live.png`
+## Architecture and accessibility decisions
 
-## 2. Keyboard tab sequence (no mouse)
+### 1. Trade-offs
+**Native controls over custom widgets.** The service picker is a native `<select>` and the date field a native `<input type="date">`. They look plainer than a custom dropdown, but they ship correct roles, keyboard handling and mobile pickers for free, and screen readers already understand them. A custom listbox would need roving tabindex and typeahead, and each is a place to introduce bugs.
 
-**Method:** Tested with keyboard only (Tab, Shift+Tab, Enter, Space, Escape), no mouse or trackpad, in Chrome on macOS using the local build, on 12 Oct 2026, before the Home view was added. The nav now has a third item, Home, ahead of Find a service. Each row was compared against the expected behaviour from the component design.
+**A contained modal instead of an inline confirmation.** The booking confirmation uses `role="dialog"` with `aria-modal`. Focus moves into it, Tab cycles only between its two buttons, and Escape closes it and returns focus to the button that opened it. The cost is a deliberate focus trap, which WCAG 2.1.2 allows because Escape always exits. The benefit is that the confirmation cannot be missed by someone who cannot see the screen change.
 
-### Directory page
-| # | Press | Expected focus / behaviour | Result |
-|---|---|---|---|
-| 1 | Tab | "Skip to main content" link appears and takes focus | ✔ Matched |
-| 2 | Tab | Find a service (nav button) | ✔ Matched |
-| 3 | Tab | Book an appointment (nav button) | ✔ Matched |
-| 4 | Tab | Search by name or symptom | ✔ Matched |
-| 5 | Tab | Refresh availability | ✔ Matched |
-| 6-11 | Tab ×6 | The six "Book…" buttons, in visual order | ✔ Matched |
-| 12 | Tab | Triage level (show/hide) | ✔ Matched |
-| 13 | Enter | Panel opens; button text changes to "hide"; Tab then reaches Urgent, Routine, Preventive | ✔ Matched |
-| 14 | Space on Urgent | Button turns dark with a tick; count line updates to "filtered by Urgent" | ✔ Matched |
-| 15 | Enter on Refresh availability | Results update; keyboard focus stays on the button | ✔ Matched |
+**Quiet versus loud live regions.** The results count uses `role="status"` (polite) so it never interrupts typing, and it is one short sentence. Validation failures use `role="alert"` (assertive) because a blocked submit is urgent. Per-field errors are not announced live. They are attached to their fields via `aria-describedby`, so they are read when the user lands there, avoiding a wall of speech.
 
-### Booking page
-| # | Press | Expected behaviour | Result |
-|---|---|---|---|
-| 1 | Enter on a Book button | View changes; heading "Book an appointment" receives focus | ✔ Matched |
-| 2 | Tab | Service, Full name, Email, Preferred date, Confirm appointment, in that order | ✔ Matched |
-| 3 | Enter on Confirm with an empty form | Error summary appears; focus moves to Full name | ✔ Matched |
-| 4 | Submit a valid form | Confirmation popup opens; focus lands on "Back to services" | ✔ Matched |
-| 5 | Tab / Shift+Tab inside the popup | Focus cycles between the two popup buttons only | ✔ Matched |
-| 6 | Escape | Popup closes; focus returns to "Confirm appointment" | ✔ Matched |
+### 2. State to accessibility-tree synchronisation
+Every ARIA attribute is derived from React state in the render, never set imperatively, so the tree cannot drift from the UI. `open` drives `aria-expanded` and `hidden` on the filter panel; the `active` array drives each button's `aria-pressed`; `errors` drives `aria-invalid` and the `aria-describedby` id list; `results.length` and `active` build the status sentence. An availability refresh sets `loading`, which drives `aria-busy` on the results list while a polite region announces the start and outcome; the button uses `aria-disabled` rather than `disabled` so focus is never lost mid-update. Focus is the only imperative piece, handled with `useRef` plus `.focus()`: the `h1` on view change (`tabIndex={-1}`), the first invalid field after a failed submit, the first modal button on open, and the previously focused element on modal close. `useEffect` cleanup in `Modal` guarantees focus restoration.
 
-### Summary
-- **Operability:** Every control was reachable with Tab and operable with Enter or Space.
-- **Focus visibility:** A blue 3px focus ring was visible on every focused element.
-- **Order:** Tab order followed the visual order on both pages, with no jumps.
-- **Keyboard traps:** None found. The popup contains focus while open, but Escape always exits it.
-- **Focus management:** Focus moved to the new page heading on view change, to the first invalid field after a failed submit, and back to the opening button when the popup closed.
+### 3. Verification and testing audit
+**Automated.** `npm test` runs 16 Vitest and Testing Library tests with axe-core. Re-run on 25 Nov 2026: **16 of 16 pass, axe-core reports 0 violations** on the landing page, the directory and the booking form in its error state, and coverage is **100% of lines and 94% of branches**. The tests assert ARIA state transitions, error linkage, `aria-busy`, focus placement and modal containment, including negative paths such as invalid emails and weekend dates. On 12 Oct 2026, Lighthouse 13.4.1 (mobile) on the local production build scored **Performance 100, Accessibility 100, Best Practices 100, SEO 100**. On 25 Nov 2026 the deployed site, now including the landing page, scored **Performance 91, Accessibility 100, Best Practices 100, SEO 100** (Lighthouse 13.5.0, mobile); the Performance drop from 99 comes from Speed Index. `npm audit --omit=dev` reports 0 vulnerabilities, and all three wireframes pass the W3C HTML validator with 0 errors.
 
-Behaviours 3 to 6 on the booking page are also covered by automated tests in `src/test/`.
-
-## 3. VoiceOver (macOS, Safari)
-
-**Method:** Tested with VoiceOver on macOS in Safari, using the local build, on 12 Oct 2026. The VO key is Control+Option. Each row compares the announcement heard against the expected announcement from the component design. Only this one screen reader and browser pairing was tested manually; NVDA and Orca were not available.
-
-| # | Check | What I did | Expected announcement | Result |
-|---|---|---|---|---|
-| 1 | Landmarks | VO+U, then the Landmarks list | Banner, navigation, main, search, complementary ("Filter by need"), and footer are all listed | ✔ Matched |
-| 2 | Filter accordion | Focused "Triage level", pressed VO+Space | Button announced as collapsed, then as expanded after activation | ✔ Matched |
-| 3 | Filter toggle | Focused "Urgent", pressed VO+Space | Announced as a toggle button, with its state changing to on | ✔ Matched |
-| 4 | Result count | Waited after filtering | "2 services shown, filtered by Urgent" is spoken without moving focus | ✔ Matched |
-| 5 | Availability refresh | Activated "Refresh availability" | "Updating availability..." is spoken, then "Availability updated. 6 services changed." | ✔ Matched |
-| 6 | Form errors | Submitted the empty booking form | "3 problems found..." is read out; focus lands on "Full name", announced as invalid with its error text | ✔ Matched |
-| 7 | Modal | Submitted a valid form, then pressed Escape | Announced as a dialog, focus on "Back to services"; Escape closes it. (The dialog was titled "Appointment requested" on 12 Oct and is now "Demo booking preview", see section 5.) | ✔ Matched |
-
-### Summary
-- **Landmarks:** The page structure was fully navigable by landmark, so a screen reader user can jump straight to search, filters or the main content.
-- **State:** `aria-expanded` and `aria-pressed` changes were announced as soon as the buttons were activated.
-- **Live regions:** The polite status messages (result count, availability updates) were announced without moving focus, and the assertive alert on a failed submit was announced immediately.
-- **Forms:** Labels, helper text and errors were read together on the focused field.
-- **Dialog:** The confirmation was announced as a dialog and focus stayed inside it until it was closed.
-- **Issues found:** None at the screen-reader level in this session. The two defects found during manual testing were visual and are listed in section 5.
-
-### Limitations
-Testing covered VoiceOver with Safari only. Results in NVDA with Firefox or Orca on Linux may differ in verbosity, so cross-reader testing is a recommended next step before a production release.
-
-## 3b. Changes since the manual tests
-
-**Status:** The Home view, the "Need help booking?" aside and the "Demo booking preview" dialog wording were added after the manual tests on 12 Oct. They have been verified by the automated tests and axe only. A manual keyboard and VoiceOver re-test of these changes has **not yet been performed**.
-
-**Covered by automated tests (25 Nov 2026):** landing page headings and landmarks with 0 axe violations; Book on a popular service preselects it and shows the aside; the dialog is named "Demo booking preview" and says nothing was booked or sent; nav `aria-current` and focus moving to the new heading across all three views.
-
-**Expected behaviour for the manual re-test (to be confirmed with a real run):**
-| # | Check | Expected |
-|---|---|---|
-| 1 | Tab order on load | Skip link, Home, Find a service, Book an appointment, then the Start here button and the two Book buttons |
-| 2 | Enter on "Find a service" (Start here) | Directory opens; heading "Find a service" receives focus |
-| 3 | Book on Child immunisation | Booking page opens with that service preselected; heading receives focus |
-| 4 | VoiceOver landmarks on Home and on the booking page | "Access support" and "Need help booking?" listed as complementary landmarks |
-| 5 | Valid submit with VoiceOver | Announced as a dialog "Demo booking preview", stating nothing was booked or sent |
-
-## 4. Screenshots
-![Focus ring](../screenshots/focus-ring.png)
-![Filters](../screenshots/filters.png)
-![Form errors](../screenshots/form-errors.png)
-![Modal](../screenshots/modal.png)
-![Home wireframe](../screenshots/wireframe-home.png)
-![Services wireframe](../screenshots/wireframe-services.png)
-![Booking wireframe](../screenshots/wireframe-booking.png)
-![Lighthouse](../screenshots/lighthouse.png)
-![Coverage](../screenshots/coverage.png)
-![Lighthouse live](../screenshots/lighthouse-live.png)
-
-## 5. Issues found and fixed
-| # | Found by | Problem | Cause | Fix | Re-checked |
-|---|---|---|---|---|---|
-| 1 | Manual (keyboard and visual) | The filter panel never hid, so the Triage level button's expanded state did not match what was on screen | CSS `display` rule overrode the `hidden` attribute | `[hidden]{display:none!important}` in `src/styles.css` | Manual and `aria-expanded` test |
-| 2 | Manual (visual) | A pressed filter did not look pressed | Ghost button style overrode the `aria-pressed` style | Added `.btn.ghost[aria-pressed="true"]` with a tick prefix so state is not conveyed by colour alone | Manual and `aria-pressed` test |
-| 3 | Marker review | Confirmation said "A confirmation is on its way" but the demo sends nothing | Copy written for a live service | Dialog now titled "Demo booking preview" and states nothing was booked or sent; demo notice added to the form and email hint | Automated test |
-| 4 | Marker review | React app lacked the landing page and the "Need help booking?" aside from the wireframes | Build drifted from Part A | Added Home view and booking-page aside; see the README deviations table | Automated tests, axe |
-
-## 6. Reflection
-The hardest part was making dynamic changes understandable without sight, because the same filter button can be correct visually and still say nothing useful to a screen reader. Tying `aria-expanded`, `aria-pressed`, `aria-busy` and the live regions directly to React state meant the announcements always matched what was on screen. Manual testing caught two bugs that the automated tests missed: the filter panel never hid, and a pressed filter did not darken, both caused by CSS overriding the `hidden` attribute and the pressed style. That showed me that axe-core and Lighthouse can report 100 while real usability problems remain, so they are a floor and not proof of accessibility. I would test with NVDA and a real screen reader user next, and add visible loading text for the availability refresh. The biggest thing I learned is to design for the keyboard and screen reader first and treat the visual layer as an addition to that foundation.
+**Manual.** Keyboard tab-sequence and VoiceOver (Safari) logs, with screenshots and a table of issues found and fixed, are in [docs/testing-log.md](docs/testing-log.md). Only VoiceOver with Safari was tested; NVDA was not. The Home view and dialog wording added afterwards were re-tested with VoiceOver on 25 Nov 2026 (section 3b of the log), apart from the new landmark names and the Escape key on the dialog, which were not observed.
