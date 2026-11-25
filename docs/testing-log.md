@@ -7,12 +7,12 @@ Tester: Muhuliseni · Manual testing: 12 Oct 2026 · Automated re-run: 25 Nov 20
 |---|---|---|
 | Vitest + Testing Library (re-run 25 Nov 2026, after landing page and demo-wording changes) | 16 of 16 passing | Components, ARIA state, focus, landing page, confirmation wording |
 | axe-core | 0 violations | Landing page; directory; booking form in error state |
-| Lighthouse 13.4.1 | 100 / 100 / 100 / 100 | Directory view (Performance, Accessibility, Best Practices, SEO) |
+| Lighthouse 13.4.1 (local build, 12 Oct 2026) | 100 / 100 / 100 / 100 | Directory view (Performance, Accessibility, Best Practices, SEO) |
 | Coverage (v8, 25 Nov 2026) | 100% lines, 94% branches | `src/` |
 | `npm audit --omit=dev` | 0 vulnerabilities | Production dependencies |
-| Lighthouse 13.4.1 (live site, mobile, slow 4G) | Performance 99, Accessibility 100, Best Practices 100, SEO 100 | https://jolly-profiterole-18779d.netlify.app/ |
+| Lighthouse 13.5.0 (live site, mobile, 25 Nov 2026) | Performance 91, Accessibility 100, Best Practices 100, SEO 100 | https://jolly-profiterole-18779d.netlify.app/ (includes the new landing page) |
 
-The Lighthouse scores above were captured on 12 Oct, before the landing page was added, and are due to be re-run. Screenshots: `../screenshots/lighthouse.png`, `../screenshots/coverage.png`
+The 25 Nov live-site run is the current result. Performance fell from 99 (12 Oct) to 91, almost entirely from Speed Index (7.7 s; FCP and LCP 1.7 s, TBT 0 ms, CLS 0). Reducing Speed Index, for example by trimming font loading, is a next step. Screenshots: `../screenshots/lighthouse.png`, `../screenshots/coverage.png`, `../screenshots/lighthouse-live.png`
 
 ## 2. Keyboard tab sequence (no mouse)
 
@@ -75,6 +75,21 @@ Behaviours 3 to 6 on the booking page are also covered by automated tests in `sr
 
 ### Limitations
 Testing covered VoiceOver with Safari only. Results in NVDA with Firefox or Orca on Linux may differ in verbosity, so cross-reader testing is a recommended next step before a production release.
+
+## 3b. Changes since the manual tests
+
+**Status:** The Home view, the "Need help booking?" aside and the "Demo booking preview" dialog wording were added after the manual tests on 12 Oct. They have been verified by the automated tests and axe only. A manual keyboard and VoiceOver re-test of these changes has **not yet been performed**.
+
+**Covered by automated tests (25 Nov 2026):** landing page headings and landmarks with 0 axe violations; Book on a popular service preselects it and shows the aside; the dialog is named "Demo booking preview" and says nothing was booked or sent; nav `aria-current` and focus moving to the new heading across all three views.
+
+**Expected behaviour for the manual re-test (to be confirmed with a real run):**
+| # | Check | Expected |
+|---|---|---|
+| 1 | Tab order on load | Skip link, Home, Find a service, Book an appointment, then the Start here button and the two Book buttons |
+| 2 | Enter on "Find a service" (Start here) | Directory opens; heading "Find a service" receives focus |
+| 3 | Book on Child immunisation | Booking page opens with that service preselected; heading receives focus |
+| 4 | VoiceOver landmarks on Home and on the booking page | "Access support" and "Need help booking?" listed as complementary landmarks |
+| 5 | Valid submit with VoiceOver | Announced as a dialog "Demo booking preview", stating nothing was booked or sent |
 
 ## 4. Screenshots
 ![Focus ring](../screenshots/focus-ring.png)
