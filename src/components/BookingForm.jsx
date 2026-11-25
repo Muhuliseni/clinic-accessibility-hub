@@ -14,7 +14,7 @@ const rules = {
 }
 const FIELDS = [
   { id: 'name', label: 'Full name', hint: 'As it appears on your health card.', type: 'text', ac: 'name' },
-  { id: 'email', label: 'Email', hint: 'We send your confirmation here.', type: 'email', ac: 'email' },
+  { id: 'email', label: 'Email', hint: 'Where a confirmation would be sent. This demo sends no email.', type: 'email', ac: 'email' },
   { id: 'date', label: 'Preferred date', hint: 'Weekdays only.', type: 'date' },
 ]
 
@@ -44,9 +44,10 @@ export default function BookingForm({ service, onDone }) {
   const chosen = SERVICES.find(s => String(s.id) === vals.service)
 
   return (
+    <div className="with-aside">
     <section aria-labelledby="bk-h">
       <h2 id="bk-h">Your details</h2>
-      <p className="hint">All fields are required.</p>
+      <p className="hint">All fields are required. This is a demo: no booking is made and no email is sent.</p>
       {/* assertive: announces immediately on failed submit */}
       <div role="alert" aria-live="assertive" className={alert ? 'summary' : undefined}>{alert}</div>
       <form onSubmit={submit} noValidate>
@@ -71,8 +72,8 @@ export default function BookingForm({ service, onDone }) {
       </form>
       {done && (
         <Modal titleId="ok-h" onClose={() => setDone(false)}>
-          <h2 id="ok-h">Appointment requested</h2>
-          <p>{chosen.name} on {vals.date}. A confirmation is on its way to {vals.email}.</p>
+          <h2 id="ok-h">Demo booking preview</h2>
+          <p>{chosen.name} on {vals.date}. This is a demo, so nothing was booked and no confirmation was sent to {vals.email}.</p>
           <div className="row">
             <button className="btn" onClick={() => onDone(true)}>Back to services</button>
             <button className="btn ghost" onClick={() => setDone(false)}>Close</button>
@@ -80,5 +81,10 @@ export default function BookingForm({ service, onDone }) {
         </Modal>
       )}
     </section>
+    <aside aria-labelledby="help-h">
+      <h2 id="help-h">Need help booking?</h2>
+      <p>Call 011 555 0143 or ask for a relay-service call.</p>
+    </aside>
+    </div>
   )
 }

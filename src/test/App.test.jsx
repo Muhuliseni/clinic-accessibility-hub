@@ -3,13 +3,19 @@ import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import App from '../App.jsx'
 
+const startAt = async u => {
+  const r = render(<App />)
+  await u.click(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Find a service' }))
+  return r
+}
+
 test('directory has no axe violations', async () => {
-  const { container } = render(<App />)
+  const u = userEvent.setup(); const { container } = await startAt(u)
   expect((await axe(container)).violations).toEqual([])
 })
 
 test('filter accordion and toggles update ARIA state and live count', async () => {
-  const u = userEvent.setup(); render(<App />)
+  const u = userEvent.setup(); await startAt(u)
   const acc = screen.getByRole('button', { name: /triage level/i })
   expect(acc).toHaveAttribute('aria-expanded', 'false')
   await u.click(acc); expect(acc).toHaveAttribute('aria-expanded', 'true')
@@ -20,7 +26,7 @@ test('filter accordion and toggles update ARIA state and live count', async () =
 })
 
 test('booking form: errors linked, announced, focused; passes axe', async () => {
-  const u = userEvent.setup(); const { container } = render(<App />)
+  const u = userEvent.setup(); const { container } = await startAt(u)
   await u.click(screen.getAllByRole('button', { name: /^Book /i })[0])
   expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
   await u.click(screen.getByRole('button', { name: /confirm appointment/i }))
@@ -33,7 +39,7 @@ test('booking form: errors linked, announced, focused; passes axe', async () => 
 })
 
 test('modal moves focus in, contains Tab, closes on Escape and restores focus', async () => {
-  const u = userEvent.setup(); render(<App />)
+  const u = userEvent.setup(); await startAt(u)
   await u.click(screen.getAllByRole('button', { name: /^Book /i })[0])
   await u.type(screen.getByLabelText('Full name'), 'Amara Nkosi')
   await u.type(screen.getByLabelText('Email'), 'a@b.co')

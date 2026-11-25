@@ -12,6 +12,18 @@ npm run build                   # deploys via netlify.toml (publish: dist)
 
 Part A lives in `/wireframes` (3 static pages, `main.css`, `persona.md`, `wcag-matrix.md`).
 
+**This is a demo.** Submitting the booking form shows a preview dialog only. No appointment is created and no email is sent, and the interface says so.
+
+### Wireframe to build
+| Wireframe | React build | Why it differs |
+|---|---|---|
+| `index.html` landing page | `Home` view (default): Start here, Popular services, Access support | Matches |
+| `services.html` filter as checkboxes in a fieldset | Disclosure button with toggle buttons (`aria-expanded`, `aria-pressed`) | Deliberate: the panel can be collapsed on small screens; state is announced and shown with a tick, not colour alone |
+| `services.html` "Next available: Tuesday" | "N slots left today", refreshable | The refresh simulates live availability |
+| `book.html` without a service field | Adds a native `<select>` for service | A booking needs to know which service; preselected from the Book button |
+| `book.html` links between pages | Buttons that change view and move focus to the new `h1` | Single-page app: focus has to be managed because there is no page load |
+| `book.html` "Need help booking?" aside | Same aside | Matches |
+
 ## Architecture and accessibility decisions
 
 ### 1. Trade-offs
@@ -25,6 +37,6 @@ Part A lives in `/wireframes` (3 static pages, `main.css`, `persona.md`, `wcag-m
 Every ARIA attribute is derived from React state in the render, never set imperatively, so the tree cannot drift from the UI. `open` drives `aria-expanded` and `hidden` on the filter panel; the `active` array drives each button's `aria-pressed`; `errors` drives `aria-invalid` and the `aria-describedby` id list; `results.length` and `active` build the status sentence. An availability refresh sets `loading`, which drives `aria-busy` on the results list while a polite region announces the start and outcome; the button uses `aria-disabled` rather than `disabled` so focus is never lost mid-update. Focus is the only imperative piece, handled with `useRef` plus `.focus()`: the `h1` on view change (`tabIndex={-1}`), the first invalid field after a failed submit, the first modal button on open, and the previously focused element on modal close. `useEffect` cleanup in `Modal` guarantees focus restoration.
 
 ### 3. Verification and testing audit
-**Automated.** `npm test` runs 13 Vitest and Testing Library tests with axe-core. On 12 Oct 2026: **13 of 13 pass, axe-core reports 0 violations** on the directory and on the booking form in its error state, and coverage is **100% of lines and 92% of branches**. The tests assert ARIA state transitions, error linkage, `aria-busy`, focus placement and modal containment, including negative paths such as invalid emails and weekend dates. Lighthouse 13.4.1 (mobile, slow 4G) on the local production build scored **Performance 100, Accessibility 100, Best Practices 100, SEO 100**. The deployed site scored **Performance 99, Accessibility 100, Best Practices 100, SEO 100**. `npm audit --omit=dev` reports 0 vulnerabilities, and all three wireframes pass the W3C HTML validator with 0 errors.
+**Automated.** `npm test` runs 16 Vitest and Testing Library tests with axe-core. Re-run on 25 Nov 2026: **16 of 16 pass, axe-core reports 0 violations** on the landing page, the directory and the booking form in its error state, and coverage is **100% of lines and 94% of branches**. The tests assert ARIA state transitions, error linkage, `aria-busy`, focus placement and modal containment, including negative paths such as invalid emails and weekend dates. On 12 Oct 2026, Lighthouse 13.4.1 (mobile, slow 4G) on the local production build scored **Performance 100, Accessibility 100, Best Practices 100, SEO 100**. The deployed site scored **Performance 99, Accessibility 100, Best Practices 100, SEO 100**. `npm audit --omit=dev` reports 0 vulnerabilities, and all three wireframes pass the W3C HTML validator with 0 errors.
 
-**Manual.** Keyboard tab-sequence and VoiceOver (Safari) logs, with screenshots, are in [docs/testing-log.md](docs/testing-log.md).
+**Manual.** Keyboard tab-sequence and VoiceOver (Safari) logs, with screenshots and a table of issues found and fixed, are in [docs/testing-log.md](docs/testing-log.md). Only VoiceOver with Safari was tested; NVDA was not.

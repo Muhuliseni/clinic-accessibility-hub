@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import Home from './components/Home.jsx'
 import ServiceDirectory from './components/ServiceDirectory.jsx'
 import BookingForm from './components/BookingForm.jsx'
 
+const TITLES = { home: 'Care you can book, your way', services: 'Find a service', book: 'Book an appointment' }
+
 export default function App() {
-  const [view, setView] = useState('services')
+  const [view, setView] = useState('home')
   const [service, setService] = useState(null)
   const h1 = useRef(null)
   const first = useRef(true)
@@ -17,13 +20,16 @@ export default function App() {
       <header>
         <p><strong>Eastbrook Community Clinic</strong></p>
         <nav aria-label="Primary"><ul>
+          <li><button className="btn ghost" aria-current={view === 'home' ? 'page' : undefined} onClick={() => go('home')}>Home</button></li>
           <li><button className="btn ghost" aria-current={view === 'services' ? 'page' : undefined} onClick={() => go('services')}>Find a service</button></li>
           <li><button className="btn ghost" aria-current={view === 'book' ? 'page' : undefined} onClick={() => go('book')}>Book an appointment</button></li>
         </ul></nav>
       </header>
       <main id="main">
-        <h1 tabIndex={-1} ref={h1}>{view === 'services' ? 'Find a service' : 'Book an appointment'}</h1>
-        {view === 'services' ? <ServiceDirectory onBook={s => go('book', s)} /> : <BookingForm service={service} onDone={back => back && go('services')} />}
+        <h1 tabIndex={-1} ref={h1}>{TITLES[view]}</h1>
+        {view === 'home' && <Home onFind={() => go('services')} onBook={s => go('book', s)} />}
+        {view === 'services' && <ServiceDirectory onBook={s => go('book', s)} />}
+        {view === 'book' && <BookingForm service={service} onDone={back => back && go('services')} />}
       </main>
       <footer><p>Open Monday to Friday, 8:00 to 17:00. Emergency? Call 112.</p></footer>
     </>

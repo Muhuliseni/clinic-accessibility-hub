@@ -1,22 +1,22 @@
 # Testing log
 
-Tester: _your name_ · Date: _date_ · Browser: Safari (VoiceOver), Chrome (Lighthouse)
+Tester: Muhuliseni · Manual testing: 12 Oct 2026 · Automated re-run: 25 Nov 2026 · Browsers: Safari (VoiceOver), Chrome (keyboard, Lighthouse)
 
-## 1. Automated results (12 Oct 2026)
+## 1. Automated results
 | Tool | Result | Scope |
 |---|---|---|
-| Vitest + Testing Library | 13 of 13 passing | Components, ARIA state, focus |
-| axe-core | 0 violations | Directory; booking form in error state |
+| Vitest + Testing Library (re-run 25 Nov 2026, after landing page and demo-wording changes) | 16 of 16 passing | Components, ARIA state, focus, landing page, confirmation wording |
+| axe-core | 0 violations | Landing page; directory; booking form in error state |
 | Lighthouse 13.4.1 | 100 / 100 / 100 / 100 | Directory view (Performance, Accessibility, Best Practices, SEO) |
-| Coverage (v8) | 100% lines, 92% branches | `src/` |
+| Coverage (v8, 25 Nov 2026) | 100% lines, 94% branches | `src/` |
 | `npm audit --omit=dev` | 0 vulnerabilities | Production dependencies |
 | Lighthouse 13.4.1 (live site, mobile, slow 4G) | Performance 99, Accessibility 100, Best Practices 100, SEO 100 | https://jolly-profiterole-18779d.netlify.app/ |
 
-Screenshots: `../screenshots/lighthouse.png`, `../screenshots/coverage.png`
+The Lighthouse scores above were captured on 12 Oct, before the landing page was added, and are due to be re-run. Screenshots: `../screenshots/lighthouse.png`, `../screenshots/coverage.png`
 
 ## 2. Keyboard tab sequence (no mouse)
 
-**Method:** Tested with keyboard only (Tab, Shift+Tab, Enter, Space, Escape), no mouse or trackpad, in Chrome on macOS using the local build, on 12 Oct 2026. Each row was compared against the expected behaviour from the component design.
+**Method:** Tested with keyboard only (Tab, Shift+Tab, Enter, Space, Escape), no mouse or trackpad, in Chrome on macOS using the local build, on 12 Oct 2026, before the Home view was added. The nav now has a third item, Home, ahead of Find a service. Each row was compared against the expected behaviour from the component design.
 
 ### Directory page
 | # | Press | Expected focus / behaviour | Result |
@@ -63,7 +63,7 @@ Behaviours 3 to 6 on the booking page are also covered by automated tests in `sr
 | 4 | Result count | Waited after filtering | "2 services shown, filtered by Urgent" is spoken without moving focus | ✔ Matched |
 | 5 | Availability refresh | Activated "Refresh availability" | "Updating availability..." is spoken, then "Availability updated. 6 services changed." | ✔ Matched |
 | 6 | Form errors | Submitted the empty booking form | "3 problems found..." is read out; focus lands on "Full name", announced as invalid with its error text | ✔ Matched |
-| 7 | Modal | Submitted a valid form, then pressed Escape | Announced as a dialog titled "Appointment requested", focus on "Back to services"; Escape closes it | ✔ Matched |
+| 7 | Modal | Submitted a valid form, then pressed Escape | Announced as a dialog, focus on "Back to services"; Escape closes it. (The dialog was titled "Appointment requested" on 12 Oct and is now "Demo booking preview", see section 5.) | ✔ Matched |
 
 ### Summary
 - **Landmarks:** The page structure was fully navigable by landmark, so a screen reader user can jump straight to search, filters or the main content.
@@ -71,7 +71,7 @@ Behaviours 3 to 6 on the booking page are also covered by automated tests in `sr
 - **Live regions:** The polite status messages (result count, availability updates) were announced without moving focus, and the assertive alert on a failed submit was announced immediately.
 - **Forms:** Labels, helper text and errors were read together on the focused field.
 - **Dialog:** The confirmation was announced as a dialog and focus stayed inside it until it was closed.
-- **Issues found:** None.
+- **Issues found:** None at the screen-reader level in this session. The two defects found during manual testing were visual and are listed in section 5.
 
 ### Limitations
 Testing covered VoiceOver with Safari only. Results in NVDA with Firefox or Orca on Linux may differ in verbosity, so cross-reader testing is a recommended next step before a production release.
@@ -88,5 +88,13 @@ Testing covered VoiceOver with Safari only. Results in NVDA with Firefox or Orca
 ![Coverage](../screenshots/coverage.png)
 ![Lighthouse live](../screenshots/lighthouse-live.png)
 
-## 5. Reflection
+## 5. Issues found and fixed
+| # | Found by | Problem | Cause | Fix | Re-checked |
+|---|---|---|---|---|---|
+| 1 | Manual (keyboard and visual) | The filter panel never hid, so the Triage level button's expanded state did not match what was on screen | CSS `display` rule overrode the `hidden` attribute | `[hidden]{display:none!important}` in `src/styles.css` | Manual and `aria-expanded` test |
+| 2 | Manual (visual) | A pressed filter did not look pressed | Ghost button style overrode the `aria-pressed` style | Added `.btn.ghost[aria-pressed="true"]` with a tick prefix so state is not conveyed by colour alone | Manual and `aria-pressed` test |
+| 3 | Marker review | Confirmation said "A confirmation is on its way" but the demo sends nothing | Copy written for a live service | Dialog now titled "Demo booking preview" and states nothing was booked or sent; demo notice added to the form and email hint | Automated test |
+| 4 | Marker review | React app lacked the landing page and the "Need help booking?" aside from the wireframes | Build drifted from Part A | Added Home view and booking-page aside; see the README deviations table | Automated tests, axe |
+
+## 6. Reflection
 The hardest part was making dynamic changes understandable without sight, because the same filter button can be correct visually and still say nothing useful to a screen reader. Tying `aria-expanded`, `aria-pressed`, `aria-busy` and the live regions directly to React state meant the announcements always matched what was on screen. Manual testing caught two bugs that the automated tests missed: the filter panel never hid, and a pressed filter did not darken, both caused by CSS overriding the `hidden` attribute and the pressed style. That showed me that axe-core and Lighthouse can report 100 while real usability problems remain, so they are a floor and not proof of accessibility. I would test with NVDA and a real screen reader user next, and add visible loading text for the availability refresh. The biggest thing I learned is to design for the keyboard and screen reader first and treat the visual layer as an addition to that foundation.

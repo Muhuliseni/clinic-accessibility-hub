@@ -1,24 +1,31 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { axe } from 'jest-axe'
 import App from '../App.jsx'
+
+const startAt = async u => {
+  const r = render(<App />)
+  await u.click(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Find a service' }))
+  return r
+}
 
 const openForm = async u => { await u.click(screen.getAllByRole('button', { name: /^Book /i })[0]) }
 const submit = u => u.click(screen.getByRole('button', { name: /confirm appointment/i }))
 
 describe('directory', () => {
   test('search narrows results and announces the count', async () => {
-    const u = userEvent.setup(); render(<App />)
+    const u = userEvent.setup(); await startAt(u)
     await u.type(screen.getByLabelText(/search by name/i), 'nurse')
     expect(screen.getByRole('status')).toHaveTextContent('2 services shown')
   })
   test('no matches shows a helpful message and a count of 0', async () => {
-    const u = userEvent.setup(); render(<App />)
+    const u = userEvent.setup(); await startAt(u)
     await u.type(screen.getByLabelText(/search by name/i), 'zzz')
     expect(screen.getByRole('status')).toHaveTextContent('0 services shown')
     expect(screen.getByText(/no services match/i)).toBeInTheDocument()
   })
   test('clear filters resets aria-pressed and is disabled when nothing is active', async () => {
-    const u = userEvent.setup(); render(<App />)
+    const u = userEvent.setup(); await startAt(u)
     await u.click(screen.getByRole('button', { name: /triage level/i }))
     const clear = screen.getByRole('button', { name: /clear filters/i })
     expect(clear).toBeDisabled()
@@ -27,7 +34,7 @@ describe('directory', () => {
     await u.click(clear); expect(routine).toHaveAttribute('aria-pressed', 'false')
   })
   test('availability refresh sets aria-busy, announces, and keeps focus', async () => {
-    const u = userEvent.setup(); render(<App />)
+    const u = userEvent.setup(); await startAt(u)
     const btn = screen.getByRole('button', { name: /refresh availability/i })
     const list = screen.getByRole('list', { name: 'Services' })
     expect(list).toHaveAttribute('aria-busy', 'false')
@@ -44,14 +51,14 @@ describe('directory', () => {
 
 describe('booking form validation (negative paths)', () => {
   test('invalid email gives a fix suggestion and aria-invalid on blur', async () => {
-    const u = userEvent.setup(); render(<App />); await openForm(u)
+    const u = userEvent.setup(); await startAt(u); await openForm(u)
     const email = screen.getByLabelText('Email')
     await u.type(email, 'not-an-email'); await u.tab()
     expect(email).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByText(/enter an email like name@example.com/i)).toBeInTheDocument()
   })
   test('weekend and past dates are rejected with specific messages', async () => {
-    const u = userEvent.setup(); render(<App />); await openForm(u)
+    const u = userEvent.setup(); await startAt(u); await openForm(u)
     const date = screen.getByLabelText('Preferred date')
     await u.type(date, '2030-01-05'); await u.tab()
     expect(screen.getByText(/open on weekdays/i)).toBeInTheDocument()
@@ -59,7 +66,7 @@ describe('booking form validation (negative paths)', () => {
     expect(screen.getByText(/today or a future date/i)).toBeInTheDocument()
   })
   test('an error clears live as soon as the value becomes valid', async () => {
-    const u = userEvent.setup(); render(<App />); await openForm(u); await submit(u)
+    const u = userEvent.setup(); await startAt(u); await openForm(u); await submit(u)
     const name = screen.getByLabelText('Full name')
     expect(name).toHaveAttribute('aria-invalid', 'true')
     await u.type(name, 'Amara Nkosi')
@@ -69,15 +76,18 @@ describe('booking form validation (negative paths)', () => {
 })
 
 describe('navigation and focus', () => {
-  test('nav marks the current page with aria-current', async () => {
+  test('nav marks the current page with aria-current and moves focus to the new heading', async () => {
     const u = userEvent.setup(); render(<App />)
-    expect(screen.getByRole('button', { name: 'Find a service' })).toHaveAttribute('aria-current', 'page')
+    expect(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+    const nav = within(screen.getByRole('navigation', { name: 'Primary' }))
+    await u.click(nav.getByRole('button', { name: 'Find a service' }))
+    expect(nav.getByRole('button', { name: 'Find a service' })).toHaveAttribute('aria-current', 'page')
     await u.click(screen.getByRole('button', { name: 'Book an appointment' }))
     expect(screen.getByRole('button', { name: 'Book an appointment' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
   })
   test('Shift+Tab from the first modal button wraps to the last (no escape, no trap on Esc)', async () => {
-    const u = userEvent.setup(); render(<App />); await openForm(u)
+    const u = userEvent.setup(); await startAt(u); await openForm(u)
     await u.type(screen.getByLabelText('Full name'), 'Amara Nkosi')
     await u.type(screen.getByLabelText('Email'), 'a@b.co')
     await u.type(screen.getByLabelText('Preferred date'), '2030-01-08')
@@ -85,5 +95,32 @@ describe('navigation and focus', () => {
     expect(screen.getByRole('button', { name: /back to services/i })).toHaveFocus()
     await u.tab({ shift: true })
     expect(screen.getByRole('button', { name: /^close$/i })).toHaveFocus()
+  })
+})
+
+describe('landing page and demo wording', () => {
+  test('landing page matches the wireframe: heading, start, popular services, access support', async () => {
+    const { container } = render(<App />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Care you can book, your way' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Start here' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Popular services' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Access support' })).toBeInTheDocument()
+    expect((await axe(container)).violations).toEqual([])
+  })
+  test('Book on a popular service preselects it in the form', async () => {
+    const u = userEvent.setup(); render(<App />)
+    await u.click(screen.getByRole('button', { name: 'Book Child immunisation' }))
+    expect(screen.getByLabelText('Service')).toHaveDisplayValue('Child immunisation')
+    expect(screen.getByRole('complementary', { name: 'Need help booking?' })).toBeInTheDocument()
+  })
+  test('confirmation says nothing was sent', async () => {
+    const u = userEvent.setup(); await startAt(u); await openForm(u)
+    await u.type(screen.getByLabelText('Full name'), 'Amara Nkosi')
+    await u.type(screen.getByLabelText('Email'), 'a@b.co')
+    await u.type(screen.getByLabelText('Preferred date'), '2030-01-08')
+    await submit(u)
+    const dlg = screen.getByRole('dialog', { name: 'Demo booking preview' })
+    expect(dlg).toHaveTextContent(/nothing was booked and no confirmation was sent/i)
+    expect(dlg).not.toHaveTextContent(/on its way/i)
   })
 })
